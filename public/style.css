@@ -1332,3 +1332,255 @@ body {
   0% { transform: translateY(30px) scale(0.97); opacity: 0; }
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
+
+/* ========== MOBILE RESPONSIVE ========== */
+
+@media (max-width: 768px) {
+  /* Header */
+  .main-header {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .brand-title {
+    font-size: 1rem;
+  }
+
+  .market-status-bar {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+  }
+
+  .wallet-info {
+    display: none;
+  }
+
+  /* Ticker */
+  .ticker-item {
+    margin-right: 24px;
+    font-size: 0.7rem;
+  }
+
+  /* Dashboard Grid */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    padding: 12px;
+    gap: 16px;
+  }
+
+  /* Grid Sections */
+  .grid-section {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .section-title {
+    font-size: 0.95rem;
+  }
+
+  .section-header {
+    margin-bottom: 14px;
+  }
+
+  /* Team Market Grid */
+  .team-market-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .team-card {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .price-lbl {
+    font-size: 1.1rem;
+  }
+
+  .team-code-lbl {
+    font-size: 0.85rem;
+  }
+
+  .team-name-lbl {
+    font-size: 0.65rem;
+  }
+
+  .card-bottom {
+    font-size: 0.6rem;
+    padding-top: 6px;
+  }
+
+  /* Header Actions */
+  .header-actions {
+    gap: 8px;
+  }
+
+  .btn-compare {
+    font-size: 0.65rem;
+    padding: 4px 8px;
+  }
+
+  /* Trading Terminal */
+  .trading-terminal-section {
+    min-height: auto;
+  }
+
+  .terminal-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .price-box {
+    text-align: left;
+  }
+
+  .price-box .current-price {
+    font-size: 1.5rem;
+  }
+
+  .chart-container {
+    height: 140px;
+  }
+
+  .trade-form {
+    padding-top: 12px;
+  }
+
+  .input-wrapper input {
+    font-size: 1rem;
+    padding: 10px;
+  }
+
+  /* Portfolio Section */
+  .portfolio-hero {
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .portfolio-val h1 {
+    font-size: 1.3rem;
+  }
+
+  .portfolio-cash h3 {
+    font-size: 1rem;
+  }
+
+  .pie-chart-container {
+    height: 180px;
+  }
+
+  .holdings-table {
+    font-size: 0.7rem;
+  }
+
+  .holdings-table th,
+  .holdings-table td {
+    padding: 8px 6px;
+  }
+
+  .trade-history-section .chart-container {
+    height: 120px;
+  }
+
+  /* Info Split Row */
+  .info-split-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Leaderboard */
+  .leader-item {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+  }
+
+  /* Events Feed */
+  .events-log-feed {
+    height: 150px;
+  }
+
+  .event-msg-card {
+    font-size: 0.7rem;
+    padding: 6px 10px;
+  }
+
+  /* Comparison Modal */
+  .modal-card {
+    padding: 18px;
+    border-radius: 16px;
+    margin: 10px;
+  }
+
+  .compare-grid {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .compare-vs {
+    justify-content: center;
+    padding: 4px 0;
+  }
+
+  .compare-side {
+    padding: 14px;
+    min-height: auto;
+  }
+
+  .compare-chart-wrap {
+    height: 150px;
+  }
+
+  /* Toast */
+  .toast {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: auto;
+  }
+
+  /* Sync Banner */
+  .sync-banner {
+    padding: 10px;
+  }
+
+  .sync-banner-content {
+    font-size: 0.75rem;
+  }
+
+  /* Wallet Gate */
+  .wallet-gate-card {
+    padding: 28px 20px;
+  }
+
+  .wallet-gate-card h1 {
+    font-size: 1.5rem;
+  }
+
+  .wallet-gate-card .subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 24px;
+  }
+
+  .btn {
+    padding: 12px 18px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .team-market-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .terminal-flag-img {
+    width: 32px;
+    height: 22px;
+  }
+
+  .modal-header h3 {
+    font-size: 1rem;
+  }
+}
