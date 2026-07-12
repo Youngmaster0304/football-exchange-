@@ -3,7 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚽ Fanfolio - World Cup Hackathon</title>
+  <title>Fanfolio - Trade World Cup Teams Like Stocks | Football Stock Exchange</title>
+
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Fanfolio lets you trade World Cup football teams like stocks. Live pricing driven by real match events — goals, penalties, red cards. Build your portfolio, climb the leaderboard.">
+  <meta name="keywords" content="football stock exchange, world cup trading, fanfolio, sports betting alternative, fantasy football, solana web3, crypto trading, world cup 2026">
+  <meta name="author" content="Fanfolio">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://fanfoliox.vercel.app/">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fanfoliox.vercel.app/">
+  <meta property="og:title" content="Fanfolio - Trade World Cup Teams Like Stocks">
+  <meta property="og:description" content="Trade World Cup teams like stocks in real-time. Live pricing driven by match events — goals, penalties, red cards. Build your portfolio and climb the leaderboard.">
+  <meta property="og:image" content="https://fanfoliox.vercel.app/og-image.png">
+  <meta property="og:site_name" content="Fanfolio">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://fanfoliox.vercel.app/">
+  <meta name="twitter:title" content="Fanfolio - Trade World Cup Teams Like Stocks">
+  <meta name="twitter:description" content="Trade World Cup teams like stocks in real-time. Live pricing driven by match events — goals, penalties, red cards.">
+  <meta name="twitter:image" content="https://fanfoliox.vercel.app/og-image.png">
+
+  <!-- Theme -->
+  <meta name="theme-color" content="#060810">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Fanfolio">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
+
+  <!-- Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Fanfolio",
+    "url": "https://fanfoliox.vercel.app/",
+    "description": "Trade World Cup football teams like stocks in real-time. Live pricing driven by match events — goals, penalties, red cards. Build your portfolio and climb the leaderboard.",
+    "applicationCategory": "Game",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "featureList": [
+      "Real-time team stock trading",
+      "Live match event pricing",
+      "Portfolio management",
+      "Global leaderboard",
+      "Solana on-chain sync"
+    ]
+  }
+  </script>
+
   <!-- Google Fonts: Outfit -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,10 +104,10 @@
   </div>
 
   <!-- Main Application Layout -->
-  <div class="app-container">
+  <div class="app-container" role="main">
     
     <!-- Top Navigation Bar -->
-    <header class="main-header">
+    <header class="main-header" role="banner">
       <div class="brand">
         <div class="logo-indicator"></div>
         <span class="brand-title">⚽ <span class="accent-text">FANFOLIO</span></span>
@@ -83,7 +140,7 @@
     <div class="dashboard-grid">
       
       <!-- Left Column: Market Grid of Teams -->
-      <section class="grid-section market-list-section">
+      <section class="grid-section market-list-section" aria-label="Live Team Markets">
         <div class="section-header">
           <h2 class="section-title"><i class="fa-solid fa-chart-line"></i> Live Team Markets</h2>
           <div class="header-actions">
@@ -106,7 +163,7 @@
       <div class="side-panel-group">
         
         <!-- Panel 1: Selected Team Details & Trading Terminal -->
-        <section class="grid-section trading-terminal-section" id="trading-terminal">
+        <section class="grid-section trading-terminal-section" id="trading-terminal" aria-label="Trading Terminal">
           <div class="terminal-unselected" id="terminal-empty-state">
             <i class="fa-solid fa-hand-pointer"></i>
             <h3>Select a Team to Trade</h3>
@@ -177,7 +234,7 @@
         </section>
 
         <!-- Panel 2: Portfolio Holdings Summary -->
-        <section class="grid-section portfolio-section">
+        <section class="grid-section portfolio-section" aria-label="My Portfolio">
           <div class="section-header">
             <h2 class="section-title"><i class="fa-solid fa-wallet"></i> My Portfolio</h2>
             <button id="btn-chain-sync" class="btn btn-sync btn-xs">
@@ -244,7 +301,7 @@
         <div class="info-split-row">
           
           <!-- Leaderboard -->
-          <section class="grid-section leaderboard-section">
+          <section class="grid-section leaderboard-section" aria-label="Leaderboard">
             <div class="section-header">
               <h2 class="section-title"><i class="fa-solid fa-trophy"></i> Leaderboard</h2>
             </div>
@@ -255,7 +312,7 @@
           </section>
           
           <!-- Live Events Feed -->
-          <section class="grid-section events-section">
+          <section class="grid-section events-section" aria-label="Match Events Log">
             <div class="section-header">
               <h2 class="section-title"><i class="fa-solid fa-bolt"></i> Match Events Log</h2>
             </div>
