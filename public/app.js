@@ -90,7 +90,10 @@ window.addEventListener('DOMContentLoaded', () => {
 // Connect Phantom Wallet
 btnConnectPhantom.addEventListener('click', async () => {
   try {
-    if (!window.solana || !window.solana.isPhantom) {
+    // Support both old (window.solana) and new (window.phantom.solana) Phantom API
+    const phantom = window.phantom?.solana || window.solana;
+    
+    if (!phantom || !phantom.isPhantom) {
       alert('Phantom Wallet not detected! Please install the extension or click "Generate Demo Wallet" to test the app instantly.');
       return;
     }
@@ -98,7 +101,7 @@ btnConnectPhantom.addEventListener('click', async () => {
     btnConnectPhantom.disabled = true;
     btnConnectPhantom.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting...';
     
-    const response = await window.solana.connect();
+    const response = await phantom.connect();
     walletAddress = response.publicKey.toString();
     isDemoWallet = false;
     demoSecretKey = null;
@@ -788,9 +791,10 @@ async function syncPortfolioOnChain() {
       signature = await connection.sendRawTransaction(transaction.serialize());
     } else {
       // Phantom Wallet extension signing
-      if (!window.solana) throw new Error("Wallet not connected");
+      const phantomSigner = window.phantom?.solana || window.solana;
+      if (!phantomSigner) throw new Error("Wallet not connected");
       
-      const signedTransaction = await window.solana.signTransaction(transaction);
+      const signedTransaction = await phantomSigner.signTransaction(transaction);
       signature = await connection.sendRawTransaction(signedTransaction.serialize());
     }
     
