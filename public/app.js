@@ -1,4 +1,4 @@
-// Football Stock Exchange - Frontend Application Logic
+// Fanfolio - Frontend Application Logic
 
 // API Configuration (loaded from config.js before this script)
 
@@ -723,7 +723,7 @@ async function syncPortfolioOnChain() {
     // 3. Build a Solana Memo Transaction
     // Standard Solana Memo Program V2 Address
     const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
-    const memoText = `Football Stock Exchange Portfolio Sync. User: ${walletAddress.substring(0, 8)}..., Net Worth: $${netWorth.toFixed(2)}`;
+    const memoText = `Fanfolio Portfolio Sync. User: ${walletAddress.substring(0, 8)}..., Net Worth: $${netWorth.toFixed(2)}`;
     
     const transaction = new solanaWeb3.Transaction().add(
       new solanaWeb3.TransactionInstruction({

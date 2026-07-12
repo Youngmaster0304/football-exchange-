@@ -1,6 +1,6 @@
-# Football Stock Exchange
+# Fanfolio
 
-**Trade World Cup teams like stocks in real-time.** Prices move live based on match events (goals, penalties, red cards, VAR decisions) and TxLINE odds data. Built on Solana for on-chain portfolio snapshots.
+**Trade World Cup teams like stocks in real-time.** Fanfolio is a stock-market-style platform for football fans. Prices move live based on match events (goals, penalties, red cards, VAR decisions) and TxLINE odds data. Built on Solana for on-chain portfolio snapshots.
 
 > Consumer & Fan Experiences Track — World Cup Hackathon
 

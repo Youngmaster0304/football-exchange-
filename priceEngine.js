@@ -1,5 +1,5 @@
 /**
- * Football Stock Exchange - Price Engine
+ * Fanfolio - Price Engine
  * 
  * Formulas:
  * 1. Implied-probability price: price = 1000 * (1 / decimalOdds)
