@@ -8,11 +8,13 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 let supabase = null;
 
-if (supabaseUrl && supabaseKey) {
+if (supabaseUrl && supabaseKey && 
+    !supabaseUrl.includes('your-project-id') && 
+    !supabaseKey.includes('your-anon-public-key')) {
   supabase = createClient(supabaseUrl, supabaseKey);
   console.log('[Supabase] Connected to database.');
 } else {
-  console.warn('[Supabase] Missing SUPABASE_URL or SUPABASE_ANON_KEY. Using in-memory fallback.');
+  console.warn('[Supabase] Missing or default SUPABASE_URL / SUPABASE_ANON_KEY. Using in-memory fallback.');
 }
 
 module.exports = supabase;
