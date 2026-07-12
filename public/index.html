@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚽ Football Stock Exchange - World Cup Hackathon</title>
+  <!-- Google Fonts: Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Solana Web3.js CDN -->
+  <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Solana Wallet Gate Overlay -->
+  <div id="wallet-gate" class="wallet-gate-overlay">
+    <div class="wallet-gate-card">
+      <div class="logo-area">
+        <i class="fa-solid fa-circle-nodes logo-icon"></i>
+        <h1>Football Stock Exchange</h1>
+      </div>
+      <p class="subtitle">Trade World Cup teams like stocks in real-time. Driven by live TxLINE data & match events.</p>
+      
+      <div class="wallet-actions">
+        <button id="btn-connect-phantom" class="btn btn-solana">
+          <img src="https://phantom.app/img/phantom-logo.svg" alt="Phantom Logo" class="phantom-logo">
+          Connect Phantom Wallet
+        </button>
+        <div class="divider">
+          <span>OR</span>
+        </div>
+        <button id="btn-generate-demo" class="btn btn-secondary">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          Generate Demo Wallet (Instant Play)
+        </button>
+      </div>
+      
+      <p class="disclaimer">No real money, no gambling. Fully virtual trading experience for the Consumer & Fan Experiences track.</p>
+    </div>
+  </div>
+
+  <!-- Main Application Layout -->
+  <div class="app-container">
+    
+    <!-- Top Navigation Bar -->
+    <header class="main-header">
+      <div class="brand">
+        <div class="logo-indicator"></div>
+        <span class="brand-title">⚽ FOOTBALL <span class="accent-text">EXCHANGE</span></span>
+      </div>
+      
+      <div class="market-status-bar">
+        <div class="status-dot pulsing"></div>
+        <span id="market-status-text">TxLINE Mock Stream Active</span>
+      </div>
+      
+      <div class="user-profile">
+        <div class="wallet-info">
+          <span class="wallet-label">Solana Account</span>
+          <span id="wallet-address" class="wallet-address-text">Not Connected</span>
+        </div>
+        <button id="btn-disconnect" class="btn-icon" title="Disconnect Wallet">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Real-time Scrolling Ticker -->
+    <div class="ticker-wrap">
+      <div id="price-ticker" class="ticker">
+        <!-- Ticker items will be dynamically generated -->
+      </div>
+    </div>
+
+    <!-- Dashboard Content Grid -->
+    <div class="dashboard-grid">
+      
+      <!-- Left Column: Market Grid of Teams -->
+      <section class="grid-section market-list-section">
+        <div class="section-header">
+          <h2 class="section-title"><i class="fa-solid fa-chart-line"></i> Live Team Markets</h2>
+          <span class="team-count" id="lbl-team-count">16 Teams Active</span>
+        </div>
+        
+        <div class="team-market-grid" id="market-grid">
+          <!-- Team Cards will be dynamically generated -->
+          <div class="loading-state">
+            <i class="fa-solid fa-spinner fa-spin"></i> Loading live markets...
+          </div>
+        </div>
+      </section>
+      
+      <!-- Right Column: Interactive Trading & Portfolio Panels -->
+      <div class="side-panel-group">
+        
+        <!-- Panel 1: Selected Team Details & Trading Terminal -->
+        <section class="grid-section trading-terminal-section" id="trading-terminal">
+          <div class="terminal-unselected" id="terminal-empty-state">
+            <i class="fa-solid fa-hand-pointer"></i>
+            <h3>Select a Team to Trade</h3>
+            <p>Click on any team in the market grid to open the trading terminal, view charts, and place buy/sell orders.</p>
+          </div>
+          
+          <div class="terminal-selected hidden" id="terminal-active-state">
+            <div class="terminal-header">
+              <div class="team-identity">
+                <img id="terminal-flag" src="" alt="Flag" class="terminal-flag-img">
+                <div>
+                  <h3 id="terminal-team-name">Argentina</h3>
+                  <span id="terminal-team-code" class="team-badge">ARG</span>
+                </div>
+              </div>
+              <div class="price-box">
+                <div class="current-price" id="terminal-price">$0.00</div>
+                <div class="price-change positive" id="terminal-change">+0.0%</div>
+              </div>
+            </div>
+            
+            <!-- Live Price Chart -->
+            <div class="chart-container">
+              <canvas id="priceChart"></canvas>
+            </div>
+            
+            <!-- Volatility Alert Indicator -->
+            <div id="volatility-indicator" class="volatility-banner hidden">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span>High Volatility Warning! Rapid pricing movements.</span>
+            </div>
+
+            <!-- Transaction Form -->
+            <div class="trade-form">
+              <div class="trade-tabs">
+                <button class="trade-tab-btn active" id="tab-buy">BUY</button>
+                <button class="trade-tab-btn" id="tab-sell">SELL</button>
+              </div>
+              
+              <div class="trade-inputs">
+                <div class="input-group">
+                  <label for="trade-shares">Shares Amount</label>
+                  <div class="input-wrapper">
+                    <input type="number" id="trade-shares" min="1" step="1" value="10">
+                    <span class="input-addon">SHARES</span>
+                  </div>
+                </div>
+                
+                <div class="estimated-summary">
+                  <div class="summary-row">
+                    <span>Available Cash</span>
+                    <span id="lbl-available-cash">$0.00</span>
+                  </div>
+                  <div class="summary-row">
+                    <span id="lbl-trade-owned-shares-label">Owned Shares</span>
+                    <span id="lbl-owned-shares">0 shares</span>
+                  </div>
+                  <div class="summary-row total-row">
+                    <span>Estimated Cost</span>
+                    <span id="lbl-estimated-cost" class="cost-value">$0.00</span>
+                  </div>
+                </div>
+                
+                <button id="btn-submit-trade" class="btn btn-buy-action">BUY SHARES</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Panel 2: Portfolio Holdings Summary -->
+        <section class="grid-section portfolio-section">
+          <div class="section-header">
+            <h2 class="section-title"><i class="fa-solid fa-wallet"></i> My Portfolio</h2>
+            <button id="btn-chain-sync" class="btn btn-sync btn-xs">
+              <i class="fa-solid fa-rotate"></i> Sync On-Chain
+            </button>
+          </div>
+          
+          <div class="portfolio-hero">
+            <div class="portfolio-val">
+              <span class="label">Net Worth (Cash + Stocks)</span>
+              <h1 id="portfolio-net-worth">$10,000.00</h1>
+            </div>
+            <div class="portfolio-cash">
+              <span class="label">Cash Balance</span>
+              <h3 id="portfolio-cash-balance">$10,000.00</h3>
+            </div>
+          </div>
+
+          <!-- On-chain Sync confirmation banner -->
+          <div id="chain-sync-banner" class="sync-banner hidden">
+            <div class="sync-banner-content">
+              <i class="fa-solid fa-circle-check text-success"></i>
+              <div>
+                <p>Saved on Solana Devnet!</p>
+                <a id="explorer-link" href="#" target="_blank" class="explorer-link">View Transaction Explorer <i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+              </div>
+            </div>
+            <button id="btn-close-sync" class="close-btn">&times;</button>
+          </div>
+          
+          <div class="holdings-list-wrapper">
+            <table class="holdings-table">
+              <thead>
+                <tr>
+                  <th>Team</th>
+                  <th>Shares</th>
+                  <th>Market Value</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="holdings-body">
+                <tr>
+                  <td colspan="4" class="empty-table-state">No stocks held. Buy shares to start building your portfolio.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+        
+        <!-- Panel 3: Live Leaders & Feeds -->
+        <div class="info-split-row">
+          
+          <!-- Leaderboard -->
+          <section class="grid-section leaderboard-section">
+            <div class="section-header">
+              <h2 class="section-title"><i class="fa-solid fa-trophy"></i> Leaderboard</h2>
+            </div>
+            <div class="leaderboard-list" id="leaderboard-list">
+              <!-- Dynamically populated -->
+              <div class="empty-state">No rankings yet.</div>
+            </div>
+          </section>
+          
+          <!-- Live Events Feed -->
+          <section class="grid-section events-section">
+            <div class="section-header">
+              <h2 class="section-title"><i class="fa-solid fa-bolt"></i> Match Events Log</h2>
+            </div>
+            <div class="events-log-feed" id="events-log">
+              <div class="empty-state">Waiting for live match events...</div>
+            </div>
+          </section>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Trade Toast Notifier -->
+  <div id="trade-toast" class="toast hidden">
+    <div class="toast-content">
+      <i class="fa-solid fa-money-bill-transfer toast-icon"></i>
+      <div>
+        <h4 id="toast-title">Trade Executed</h4>
+        <p id="toast-desc">User bought 10 shares of BRA</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Config & Logic -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+
+</body>
+</html>

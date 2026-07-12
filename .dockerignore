@@ -1,0 +1,6 @@
+node_modules/
+npm-debug.log
+.env
+server_wallet.json
+portfolios.json
+.DS_Store

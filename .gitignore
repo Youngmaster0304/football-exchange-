@@ -1,0 +1,5 @@
+node_modules/
+.env
+server_wallet.json
+portfolios.json
+.DS_Store
