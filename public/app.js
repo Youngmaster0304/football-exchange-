@@ -13,6 +13,13 @@ let marketTeams = {}; // code -> teamObject
 let chartInstance = null;
 let socket = null;
 
+// New feature state
+let pieChartInstance = null;
+let tradeHistoryChartInstance = null;
+let compareChartInstance = null;
+let compareSelected = []; // max 2 team codes
+let netWorthHistory = []; // array of { time, value }
+
 // DOM Elements
 const walletGate = document.getElementById('wallet-gate');
 const btnConnectPhantom = document.getElementById('btn-connect-phantom');
@@ -55,6 +62,17 @@ const explorerLink = document.getElementById('explorer-link');
 const tradeToast = document.getElementById('trade-toast');
 const toastTitle = document.getElementById('toast-title');
 const toastDesc = document.getElementById('toast-desc');
+
+// Compare Modal DOM
+const btnCompare = document.getElementById('btn-compare');
+const compareModal = document.getElementById('compare-modal');
+const btnCloseCompare = document.getElementById('btn-close-compare');
+const compareLeft = document.getElementById('compare-left');
+const compareRight = document.getElementById('compare-right');
+
+// Portfolio Chart DOM
+const portfolioPieCanvas = document.getElementById('portfolioPieChart');
+const tradeHistoryCanvas = document.getElementById('tradeHistoryChart');
 
 /* ==========================================
    SOLANA WALLET INTEGRATION
@@ -174,6 +192,12 @@ async function fetchPortfolio() {
     
     // Render holdings table
     renderHoldings(data.holdings);
+    
+    // Render portfolio pie chart
+    renderPortfolioPieChart(data.holdings);
+    
+    // Record net worth for history chart
+    recordNetWorth(data.netWorth);
   } catch (err) {
     console.error('Error fetching portfolio:', err);
   }
@@ -511,6 +535,12 @@ function handleMarketTick(data) {
   renderPriceTicker();
   renderLeaderboard(data.leaderboard);
   
+  // Update portfolio pie chart and record net worth
+  fetchPortfolio().then(() => {
+    const currentPrices = {};
+    Object.keys(marketTeams).forEach(code => { currentPrices[code] = marketTeams[code].price; });
+  });
+  
   // If a team is selected in terminal, update its live details and chart
   if (selectedTeamCode) {
     const team = marketTeams[selectedTeamCode];
@@ -606,7 +636,13 @@ function renderMarketGrid() {
       </div>
     `;
     
-    card.addEventListener('click', () => selectTeam(team.code));
+    card.addEventListener('click', (e) => {
+      if (e.shiftKey) {
+        toggleCompare(team.code);
+      } else {
+        selectTeam(team.code);
+      }
+    });
     marketGrid.appendChild(card);
   });
 }
@@ -774,4 +810,225 @@ async function syncPortfolioOnChain() {
     btnChainSync.disabled = false;
     btnChainSync.innerHTML = '<i class="fa-solid fa-rotate"></i> Sync On-Chain';
   }
+}
+
+/* ==========================================
+   PORTFOLIO PIE CHART
+   ========================================== */
+
+function renderPortfolioPieChart(holdings) {
+  const ctx = portfolioPieCanvas.getContext('2d');
+  if (pieChartInstance) pieChartInstance.destroy();
+
+  const labels = [];
+  const data = [];
+  const colors = ['#00f2fe', '#4facfe', '#10b981', '#fbbf24', '#f43f5e', '#ff0844', '#a855f7', '#fb923c'];
+
+  if (holdings && Object.keys(holdings).length > 0) {
+    Object.entries(holdings).forEach(([code, shares]) => {
+      const team = marketTeams[code];
+      if (team) {
+        labels.push(code);
+        data.push(shares * team.price);
+      }
+    });
+  }
+
+  // Add cash
+  labels.push('Cash');
+  data.push(currentPortfolioCash);
+  colors.push('#334155');
+
+  if (data.length <= 1 && data[0] === 10000) {
+    // No holdings, just show cash
+    pieChartInstance = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Cash'],
+        datasets: [{ data: [10000], backgroundColor: ['#334155'], borderWidth: 0 }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: { legend: { display: false } }
+      }
+    });
+    return;
+  }
+
+  pieChartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data, backgroundColor: colors.slice(0, data.length), borderWidth: 0, hoverOffset: 6 }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '60%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#94a3b8', font: { family: 'Outfit', size: 11 }, padding: 8, usePointStyle: true, pointStyleWidth: 8 }
+        }
+      }
+    }
+  });
+}
+
+/* ==========================================
+   NET WORTH HISTORY CHART
+   ========================================== */
+
+function recordNetWorth(netWorth) {
+  netWorthHistory.push({ time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), value: netWorth });
+  if (netWorthHistory.length > 30) netWorthHistory.shift();
+  renderTradeHistoryChart();
+}
+
+function renderTradeHistoryChart() {
+  const ctx = tradeHistoryCanvas.getContext('2d');
+  if (tradeHistoryChartInstance) tradeHistoryChartInstance.destroy();
+
+  if (netWorthHistory.length < 2) return;
+
+  tradeHistoryChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: netWorthHistory.map(p => p.time),
+      datasets: [{
+        label: 'Net Worth',
+        data: netWorthHistory.map(p => p.value),
+        borderColor: '#a855f7',
+        borderWidth: 2,
+        backgroundColor: 'rgba(168, 85, 247, 0.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#64748b', font: { family: 'Outfit', size: 9 }, maxTicksLimit: 6 } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { family: 'Outfit', size: 9 } } }
+      }
+    }
+  });
+}
+
+/* ==========================================
+   TEAM COMPARISON
+   ========================================== */
+
+btnCompare.addEventListener('click', () => {
+  if (compareSelected.length < 2) return;
+  compareModal.classList.remove('hidden');
+  renderCompareModal();
+});
+
+btnCloseCompare.addEventListener('click', () => {
+  compareModal.classList.add('hidden');
+});
+
+compareModal.addEventListener('click', (e) => {
+  if (e.target === compareModal) compareModal.classList.add('hidden');
+});
+
+function toggleCompare(code) {
+  const idx = compareSelected.indexOf(code);
+  if (idx >= 0) {
+    compareSelected.splice(idx, 1);
+  } else if (compareSelected.length < 2) {
+    compareSelected.push(code);
+  } else {
+    compareSelected.shift();
+    compareSelected.push(code);
+  }
+
+  // Update card highlights
+  document.querySelectorAll('.team-card').forEach(card => {
+    if (compareSelected.includes(card.dataset.code)) {
+      card.classList.add('compare-selected');
+    } else {
+      card.classList.remove('compare-selected');
+    }
+  });
+
+  btnCompare.disabled = compareSelected.length < 2;
+  btnCompare.textContent = compareSelected.length < 2 ? `Compare (${compareSelected.length}/2)` : 'Compare';
+}
+
+function renderCompareModal() {
+  const left = marketTeams[compareSelected[0]];
+  const right = marketTeams[compareSelected[1]];
+  if (!left || !right) return;
+
+  function buildSide(team) {
+    return `
+      <img src="https://flagcdn.com/w80/${team.iso}.png" class="terminal-flag-img" style="margin-bottom: 10px;">
+      <div class="compare-team-name">${team.name}</div>
+      <div class="compare-team-code">${team.code}</div>
+      <div class="compare-stat"><span class="label">Price</span><span class="value">$${team.price.toFixed(2)}</span></div>
+      <div class="compare-stat"><span class="label">Odds</span><span class="value">${team.odds.toFixed(2)}</span></div>
+      <div class="compare-stat"><span class="label">Change</span><span class="value" style="color: ${team.changePercent >= 0 ? 'var(--success)' : 'var(--danger)'}">${team.changePercent >= 0 ? '+' : ''}${team.changePercent.toFixed(2)}%</span></div>
+      <div class="compare-stat"><span class="label">Volatility</span><span class="value">${team.volatility.toFixed(2)}</span></div>
+      <div class="compare-stat"><span class="label">Impulse</span><span class="value">${team.activeImpulse.toFixed(2)}</span></div>
+    `;
+  }
+
+  compareLeft.innerHTML = buildSide(left);
+  compareLeft.classList.add('filled');
+  compareRight.innerHTML = buildSide(right);
+  compareRight.classList.add('filled');
+
+  // Render comparison chart
+  const ctx = document.getElementById('compareChart').getContext('2d');
+  if (compareChartInstance) compareChartInstance.destroy();
+
+  const maxLen = Math.max(left.priceHistory.length, right.priceHistory.length);
+  const leftHist = left.priceHistory;
+  const rightHist = right.priceHistory;
+
+  compareChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: Array.from({ length: maxLen }, (_, i) => `T-${maxLen - 1 - i}`),
+      datasets: [
+        {
+          label: left.code,
+          data: leftHist,
+          borderColor: '#00f2fe',
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 1,
+          fill: false
+        },
+        {
+          label: right.code,
+          data: rightHist,
+          borderColor: '#fbbf24',
+          borderWidth: 2,
+          tension: 0.3,
+          pointRadius: 1,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: { family: 'Outfit', size: 11 }, usePointStyle: true } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#64748b', font: { family: 'Outfit', size: 9 } } },
+        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { family: 'Outfit', size: 9 } } }
+      }
+    }
+  });
 }

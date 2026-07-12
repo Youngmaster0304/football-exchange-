@@ -86,7 +86,12 @@
       <section class="grid-section market-list-section">
         <div class="section-header">
           <h2 class="section-title"><i class="fa-solid fa-chart-line"></i> Live Team Markets</h2>
-          <span class="team-count" id="lbl-team-count">16 Teams Active</span>
+          <div class="header-actions">
+            <button id="btn-compare" class="btn btn-compare btn-xs" disabled>
+              <i class="fa-solid fa-scale-balanced"></i> Compare
+            </button>
+            <span class="team-count" id="lbl-team-count">16 Teams Active</span>
+          </div>
         </div>
         
         <div class="team-market-grid" id="market-grid">
@@ -191,6 +196,11 @@
             </div>
           </div>
 
+          <!-- Portfolio Allocation Pie Chart -->
+          <div class="pie-chart-container">
+            <canvas id="portfolioPieChart"></canvas>
+          </div>
+
           <!-- On-chain Sync confirmation banner -->
           <div id="chain-sync-banner" class="sync-banner hidden">
             <div class="sync-banner-content">
@@ -219,6 +229,14 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Trade History Chart -->
+          <div class="trade-history-section">
+            <h3 class="sub-section-title"><i class="fa-solid fa-chart-area"></i> Net Worth Over Time</h3>
+            <div class="chart-container">
+              <canvas id="tradeHistoryChart"></canvas>
+            </div>
           </div>
         </section>
         
@@ -258,6 +276,28 @@
       <div>
         <h4 id="toast-title">Trade Executed</h4>
         <p id="toast-desc">User bought 10 shares of BRA</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Team Comparison Modal -->
+  <div id="compare-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-scale-balanced"></i> Team Comparison</h3>
+        <button id="btn-close-compare" class="close-btn">&times;</button>
+      </div>
+      <div class="compare-grid">
+        <div class="compare-side" id="compare-left">
+          <div class="compare-placeholder">Click a team</div>
+        </div>
+        <div class="compare-vs">VS</div>
+        <div class="compare-side" id="compare-right">
+          <div class="compare-placeholder">Click a team</div>
+        </div>
+      </div>
+      <div class="compare-chart-wrap">
+        <canvas id="compareChart"></canvas>
       </div>
     </div>
   </div>
