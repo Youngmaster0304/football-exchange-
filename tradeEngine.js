@@ -1,32 +1,60 @@
-const fs = require('fs');
-const path = require('path');
+const supabase = require('./supabaseClient');
 
-const PORTFOLIOS_FILE = path.join(__dirname, 'portfolios.json');
 let portfolios = {};
 
-// Load existing portfolios from file if it exists
-function loadPortfolios() {
+// In-memory fallback when Supabase is not configured
+let useDatabase = false;
+
+/**
+ * Initializes the trade engine - loads data from Supabase or memory
+ */
+async function initialize() {
+  if (!supabase) {
+    console.log('[TradeEngine] Running with in-memory storage.');
+    return;
+  }
+
   try {
-    if (fs.existsSync(PORTFOLIOS_FILE)) {
-      const data = fs.readFileSync(PORTFOLIOS_FILE, 'utf8');
-      portfolios = JSON.parse(data);
-      console.log(`[TradeEngine] Loaded ${Object.keys(portfolios).length} portfolios from disk.`);
-    } else {
-      portfolios = {};
-      console.log('[TradeEngine] No portfolios found on disk. Initializing fresh DB.');
-    }
-  } catch (error) {
-    console.error('[TradeEngine] Error loading portfolios:', error.message);
+    const { data, error } = await supabase.from('portfolios').select('*');
+    if (error) throw error;
+
     portfolios = {};
+    (data || []).forEach(row => {
+      portfolios[row.user_id] = {
+        userId: row.user_id,
+        cash: row.cash,
+        holdings: row.holdings || {},
+        history: row.history || []
+      };
+    });
+
+    useDatabase = true;
+    console.log(`[TradeEngine] Loaded ${Object.keys(portfolios).length} portfolios from Supabase.`);
+  } catch (error) {
+    console.error('[TradeEngine] Supabase init failed, falling back to memory:', error.message);
+    useDatabase = false;
   }
 }
 
-// Save current portfolios to file
-function savePortfolios() {
+/**
+ * Saves a portfolio to Supabase (upsert)
+ */
+async function savePortfolio(portfolio) {
+  if (!useDatabase) return;
+
   try {
-    fs.writeFileSync(PORTFOLIOS_FILE, JSON.stringify(portfolios, null, 2), 'utf8');
+    const { error } = await supabase
+      .from('portfolios')
+      .upsert({
+        user_id: portfolio.userId,
+        cash: portfolio.cash,
+        holdings: portfolio.holdings,
+        history: portfolio.history
+      }, { onConflict: 'user_id' });
+
+    if (error) throw error;
   } catch (error) {
-    console.error('[TradeEngine] Error saving portfolios:', error.message);
+    console.error('[TradeEngine] Error saving portfolio:', error.message);
   }
 }
 
@@ -35,19 +63,19 @@ function savePortfolios() {
  * @param {string} userId - Solana wallet public key or guest identifier
  * @returns {object} The portfolio object
  */
-function getOrCreatePortfolio(userId) {
+async function getOrCreatePortfolio(userId) {
   if (!userId) return null;
-  
+
   if (!portfolios[userId]) {
     portfolios[userId] = {
       userId: userId,
-      cash: 10000.0, // Start with $10,000 virtual cash
-      holdings: {},  // Map of teamCode -> shares count (integer)
-      history: []    // Array of trade records
+      cash: 10000.0,
+      holdings: {},
+      history: []
     };
-    savePortfolios();
+    await savePortfolio(portfolios[userId]);
   }
-  
+
   return portfolios[userId];
 }
 
@@ -60,13 +88,12 @@ function getOrCreatePortfolio(userId) {
  * @param {number} currentPrice - Current market price of the team stock
  * @returns {object} { success: boolean, message: string, portfolio: object }
  */
-function executeTrade(userId, teamCode, action, shares, currentPrice) {
-  const portfolio = getOrCreatePortfolio(userId);
+async function executeTrade(userId, teamCode, action, shares, currentPrice) {
+  const portfolio = await getOrCreatePortfolio(userId);
   if (!portfolio) {
     return { success: false, message: 'Invalid User ID' };
   }
 
-  // Validate inputs
   shares = parseInt(shares);
   if (isNaN(shares) || shares <= 0) {
     return { success: false, message: 'Shares must be a positive integer.' };
@@ -76,17 +103,15 @@ function executeTrade(userId, teamCode, action, shares, currentPrice) {
 
   if (action === 'BUY') {
     if (portfolio.cash < cost) {
-      return { 
-        success: false, 
-        message: `Insufficient cash. Required: $${cost.toFixed(2)}, Available: $${portfolio.cash.toFixed(2)}` 
+      return {
+        success: false,
+        message: `Insufficient cash. Required: $${cost.toFixed(2)}, Available: $${portfolio.cash.toFixed(2)}`
       };
     }
-    
-    // Deduct cash and add holdings
+
     portfolio.cash -= cost;
     portfolio.holdings[teamCode] = (portfolio.holdings[teamCode] || 0) + shares;
-    
-    // Record transaction
+
     portfolio.history.push({
       id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       timestamp: Date.now(),
@@ -96,30 +121,27 @@ function executeTrade(userId, teamCode, action, shares, currentPrice) {
       price: currentPrice,
       total: cost
     });
-    
-    savePortfolios();
+
+    await savePortfolio(portfolio);
     return { success: true, message: `Successfully bought ${shares} shares of ${teamCode}`, portfolio };
-  } 
-  
+  }
+
   if (action === 'SELL') {
     const currentShares = portfolio.holdings[teamCode] || 0;
     if (currentShares < shares) {
-      return { 
-        success: false, 
-        message: `Insufficient shares. Attempting to sell: ${shares}, Owned: ${currentShares}` 
+      return {
+        success: false,
+        message: `Insufficient shares. Attempting to sell: ${shares}, Owned: ${currentShares}`
       };
     }
-    
-    // Add cash and subtract holdings
+
     portfolio.cash += cost;
     portfolio.holdings[teamCode] -= shares;
-    
-    // Clean up key if 0 shares
+
     if (portfolio.holdings[teamCode] === 0) {
       delete portfolio.holdings[teamCode];
     }
-    
-    // Record transaction
+
     portfolio.history.push({
       id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       timestamp: Date.now(),
@@ -129,8 +151,8 @@ function executeTrade(userId, teamCode, action, shares, currentPrice) {
       price: currentPrice,
       total: cost
     });
-    
-    savePortfolios();
+
+    await savePortfolio(portfolio);
     return { success: true, message: `Successfully sold ${shares} shares of ${teamCode}`, portfolio };
   }
 
@@ -169,13 +191,11 @@ function getLeaderboard(currentPrices) {
       };
     })
     .sort((a, b) => b.netWorth - a.netWorth)
-    .slice(0, 10); // Return top 10
+    .slice(0, 10);
 }
 
-// Initialize
-loadPortfolios();
-
 module.exports = {
+  initialize,
   getOrCreatePortfolio,
   executeTrade,
   calculateNetWorth,

@@ -105,8 +105,8 @@ app.get('/api/teams', (req, res) => {
   res.json(teamsArray);
 });
 
-app.get('/api/portfolio/:userId', (req, res) => {
-  const portfolio = tradeEngine.getOrCreatePortfolio(req.params.userId);
+app.get('/api/portfolio/:userId', async (req, res) => {
+  const portfolio = await tradeEngine.getOrCreatePortfolio(req.params.userId);
   if (!portfolio) {
     return res.status(400).json({ error: 'Invalid user ID' });
   }
@@ -132,7 +132,7 @@ app.get('/api/leaderboard', (req, res) => {
   res.json(tradeEngine.getLeaderboard(currentPrices));
 });
 
-app.post('/api/trade', (req, res) => {
+app.post('/api/trade', async (req, res) => {
   const { userId, teamCode, action, shares } = req.body;
   
   if (!userId || !teamCode || !action || !shares) {
@@ -144,7 +144,7 @@ app.post('/api/trade', (req, res) => {
     return res.status(400).json({ error: 'Invalid team code' });
   }
   
-  const result = tradeEngine.executeTrade(userId, teamCode, action, shares, team.currentPrice);
+  const result = await tradeEngine.executeTrade(userId, teamCode, action, shares, team.currentPrice);
   
   if (result.success) {
     // Broadcast trade event to highlight activity
@@ -331,14 +331,18 @@ async function mainMarketTick() {
   }
 }
 
-// Start polling loop
-mainMarketTick();
-setInterval(mainMarketTick, 5000);
+// Initialize trade engine (loads from Supabase or memory) then start
+tradeEngine.initialize().then(() => {
+  // Start polling loop
+  mainMarketTick();
+  setInterval(mainMarketTick, 5000);
 
-server.listen(PORT, () => {
-  console.log(`==================================================`);
-  console.log(` ⚽ FOOTBALL STOCK EXCHANGE BACKEND RUNNING      `);
-  console.log(` Port: ${PORT}                                   `);
-  console.log(` Mode: ${process.env.TXLINE_MOCK !== 'false' ? 'MOCK' : 'LIVE'} `);
-  console.log(`==================================================`);
+  server.listen(PORT, () => {
+    console.log(`==================================================`);
+    console.log(` ⚽ FANFOLIO BACKEND RUNNING                     `);
+    console.log(` Port: ${PORT}                                   `);
+    console.log(` Mode: ${process.env.TXLINE_MOCK !== 'false' ? 'MOCK' : 'LIVE'} `);
+    console.log(` DB: ${process.env.SUPABASE_URL ? 'Supabase' : 'In-Memory'}       `);
+    console.log(`==================================================`);
+  });
 });
