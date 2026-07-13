@@ -6,6 +6,7 @@
 let walletAddress = localStorage.getItem('walletAddress') || null;
 let isDemoWallet = localStorage.getItem('isDemoWallet') === 'true';
 let demoSecretKey = localStorage.getItem('demoSecretKey') ? JSON.parse(localStorage.getItem('demoSecretKey')) : null;
+let isMetaMask = localStorage.getItem('isMetaMask') === 'true';
 
 let selectedTeamCode = null;
 let activeTradeTab = 'BUY'; // BUY or SELL
@@ -23,6 +24,7 @@ let netWorthHistory = []; // array of { time, value }
 // DOM Elements
 const walletGate = document.getElementById('wallet-gate');
 const btnConnectPhantom = document.getElementById('btn-connect-phantom');
+const btnConnectMetaMask = document.getElementById('btn-connect-metamask');
 const btnGenerateDemo = document.getElementById('btn-generate-demo');
 const walletAddressText = document.getElementById('wallet-address');
 const btnDisconnect = document.getElementById('btn-disconnect');
@@ -118,6 +120,35 @@ btnConnectPhantom.addEventListener('click', async () => {
   }
 });
 
+// Connect MetaMask Wallet
+btnConnectMetaMask.addEventListener('click', async () => {
+  try {
+    if (!window.ethereum) {
+      alert('MetaMask not detected! Please install the MetaMask extension or click "Generate Demo Wallet" to test the app instantly.');
+      return;
+    }
+    btnConnectMetaMask.disabled = true;
+    btnConnectMetaMask.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Connecting...';
+    
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    walletAddress = accounts[0];
+    isDemoWallet = false;
+    demoSecretKey = null;
+    isMetaMask = true;
+    
+    localStorage.setItem('walletAddress', walletAddress);
+    localStorage.setItem('isDemoWallet', 'false');
+    localStorage.setItem('isMetaMask', 'true');
+    localStorage.removeItem('demoSecretKey');
+    
+    initializeDashboard();
+  } catch (error) {
+    console.error('MetaMask connection failed:', error);
+    btnConnectMetaMask.disabled = false;
+    btnConnectMetaMask.innerHTML = '<svg class="metamask-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" rx="28" fill="#E2761B"/><polygon points="25,25 35,45 20,40" fill="#FFFFFF" opacity="0.9"/><polygon points="75,25 65,45 80,40" fill="#FFFFFF" opacity="0.9"/><polygon points="50,75 25,45 75,45" fill="#F6851B"/><polygon points="50,75 35,45 50,45" fill="#D76600"/><polygon points="50,75 65,45 50,45" fill="#D76600"/><polygon points="35,45 42,48 38,53" fill="#161616"/><polygon points="65,45 58,48 62,53" fill="#161616"/><polygon points="50,75 47,70 53,70" fill="#161616"/></svg> Connect MetaMask Wallet';
+  }
+});
+
 // Generate Demo Wallet (Instant Play fallback)
 btnGenerateDemo.addEventListener('click', () => {
   try {
@@ -155,6 +186,16 @@ btnDisconnect.addEventListener('click', () => {
 // Main dashboard initialization
 function initializeDashboard() {
   walletGate.classList.add('hidden');
+  
+  const walletLabel = document.getElementById('wallet-label');
+  if (isMetaMask) {
+    walletLabel.innerText = 'MetaMask Account';
+  } else if (isDemoWallet) {
+    walletLabel.innerText = 'Demo Account';
+  } else {
+    walletLabel.innerText = 'Solana Account';
+  }
+
   walletAddressText.innerText = walletAddress.substring(0, 6) + '...' + walletAddress.substring(walletAddress.length - 4);
   if (isDemoWallet) {
     walletAddressText.innerText += ' (Demo)';
@@ -750,66 +791,90 @@ async function syncPortfolioOnChain() {
   btnChainSync.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Syncing...';
   
   try {
-    // 1. Establish connection to Solana Devnet
-    const connection = new solanaWeb3.Connection("https://api.devnet.solana.com", "confirmed");
-    const pubKey = new solanaWeb3.PublicKey(walletAddress);
-    
-    // 2. Fetch current net worth of the user portfolio
-    const res = await fetch(`${API_URL}/api/portfolio/${walletAddress}`);
-    const data = await res.json();
-    const netWorth = data.netWorth;
-    
-    // 3. Build a Solana Memo Transaction
-    // Standard Solana Memo Program V2 Address
-    const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
-    const memoText = `Fanfolio Portfolio Sync. User: ${walletAddress.substring(0, 8)}..., Net Worth: $${netWorth.toFixed(2)}`;
-    
-    const transaction = new solanaWeb3.Transaction().add(
-      new solanaWeb3.TransactionInstruction({
-        keys: [{ pubkey: pubKey, isSigner: true, isWritable: true }],
-        programId: memoProgramId,
-        data: Array.from(new TextEncoder().encode(memoText))
-      })
-    );
-    
-    // Set recent blockhash and fee payer
-    const { blockhash } = await connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = pubKey;
-    
-    let signature = "";
-    
-    // 4. Sign and Send Transaction
-    if (isDemoWallet) {
-      // Local demo keypair signing
-      if (!demoSecretKey) throw new Error("Demo secret key missing");
-      const keypair = solanaWeb3.Keypair.fromSecretKey(new Uint8Array(demoSecretKey));
+    if (isMetaMask) {
+      // EVM Sync Flow (MetaMask)
+      // 1. Fetch current net worth of the user portfolio
+      const res = await fetch(`${API_URL}/api/portfolio/${walletAddress}`);
+      const data = await res.json();
+      const netWorth = data.netWorth;
       
-      transaction.sign(keypair);
+      // 2. Build EVM Transaction (Zero value self-transfer with portfolio memo in hex data)
+      const memoText = `Fanfolio Portfolio Sync. User: ${walletAddress.substring(0, 8)}..., Net Worth: $${netWorth.toFixed(2)}`;
+      const hexData = '0x' + Array.from(new TextEncoder().encode(memoText)).map(b => b.toString(16).padStart(2, '0')).join('');
       
-      // Send raw transaction
-      signature = await connection.sendRawTransaction(transaction.serialize());
+      const transactionParameters = {
+        to: walletAddress, // Self-transfer
+        from: walletAddress,
+        value: '0x0',
+        data: hexData
+      };
+      
+      // 3. Prompt MetaMask to sign and broadcast
+      const txHash = await window.ethereum.request({
+        method: 'eth_sendTransaction',
+        params: [transactionParameters],
+      });
+      
+      console.log(`[EVM] Submitted transaction hash: ${txHash}`);
+      
+      // 4. Update sync confirmation banner and Explorer link
+      const bannerText = chainSyncBanner.querySelector('p');
+      if (bannerText) bannerText.innerText = "Saved on Sepolia Testnet!";
+      explorerLink.href = `https://sepolia.etherscan.io/tx/${txHash}`;
+      chainSyncBanner.classList.remove('hidden');
     } else {
-      // Phantom Wallet extension signing
-      const phantomSigner = window.phantom?.solana || window.solana;
-      if (!phantomSigner) throw new Error("Wallet not connected");
+      // Solana Sync Flow
+      // 1. Establish connection to Solana Devnet
+      const connection = new solanaWeb3.Connection("https://api.devnet.solana.com", "confirmed");
+      const pubKey = new solanaWeb3.PublicKey(walletAddress);
       
-      const signedTransaction = await phantomSigner.signTransaction(transaction);
-      signature = await connection.sendRawTransaction(signedTransaction.serialize());
+      // 2. Fetch current net worth of the user portfolio
+      const res = await fetch(`${API_URL}/api/portfolio/${walletAddress}`);
+      const data = await res.json();
+      const netWorth = data.netWorth;
+      
+      // 3. Build a Solana Memo Transaction
+      const memoProgramId = new solanaWeb3.PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+      const memoText = `Fanfolio Portfolio Sync. User: ${walletAddress.substring(0, 8)}..., Net Worth: $${netWorth.toFixed(2)}`;
+      
+      const transaction = new solanaWeb3.Transaction().add(
+        new solanaWeb3.TransactionInstruction({
+          keys: [{ pubkey: pubKey, isSigner: true, isWritable: true }],
+          programId: memoProgramId,
+          data: Array.from(new TextEncoder().encode(memoText))
+        })
+      );
+      
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = pubKey;
+      
+      let signature = "";
+      
+      if (isDemoWallet) {
+        if (!demoSecretKey) throw new Error("Demo secret key missing");
+        const keypair = solanaWeb3.Keypair.fromSecretKey(new Uint8Array(demoSecretKey));
+        transaction.sign(keypair);
+        signature = await connection.sendRawTransaction(transaction.serialize());
+      } else {
+        const phantomSigner = window.phantom?.solana || window.solana;
+        if (!phantomSigner) throw new Error("Wallet not connected");
+        const signedTransaction = await phantomSigner.signTransaction(transaction);
+        signature = await connection.sendRawTransaction(signedTransaction.serialize());
+      }
+      
+      console.log(`[Solana] Submitted Tx: ${signature}. Waiting for confirmation...`);
+      await connection.confirmTransaction(signature, "confirmed");
+      console.log('[Solana] Tx confirmed successfully!');
+      
+      const bannerText = chainSyncBanner.querySelector('p');
+      if (bannerText) bannerText.innerText = "Saved on Solana Devnet!";
+      explorerLink.href = `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
+      chainSyncBanner.classList.remove('hidden');
     }
-    
-    // 5. Wait for confirmation
-    console.log(`[Solana] Submitted Tx: ${signature}. Waiting for confirmation...`);
-    await connection.confirmTransaction(signature, "confirmed");
-    console.log('[Solana] Tx confirmed successfully!');
-    
-    // 6. Show Explorer link
-    explorerLink.href = `https://explorer.solana.com/tx/${signature}?cluster=devnet`;
-    chainSyncBanner.classList.remove('hidden');
-    
   } catch (error) {
     console.error('On-chain sync error:', error);
-    alert(`Solana Sync Failed: ${error.message || error}`);
+    alert(`Sync Failed: ${error.message || error}`);
   } finally {
     btnChainSync.disabled = false;
     btnChainSync.innerHTML = '<i class="fa-solid fa-rotate"></i> Sync On-Chain';
