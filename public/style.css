@@ -278,6 +278,84 @@ body {
   color: var(--text-secondary);
 }
 
+/* Practice vs. Earn Mode Toggle Switch */
+.mode-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 5px 12px;
+  border-radius: 30px;
+  border: 1px solid var(--border-color);
+}
+
+.toggle-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: color 0.3s;
+}
+
+.toggle-label.active {
+  color: var(--accent-cyan);
+}
+
+.toggle-label#toggle-lbl-real.active {
+  color: var(--accent-pink);
+  text-shadow: 0 0 10px rgba(255, 8, 68, 0.3);
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.08);
+  transition: .3s;
+  border: 1px solid var(--border-color);
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 12px;
+  width: 12px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--text-secondary);
+  transition: .3s;
+}
+
+input:checked + .slider {
+  background-color: rgba(255, 8, 68, 0.15);
+  border-color: rgba(255, 8, 68, 0.3);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+  background-color: var(--accent-pink);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
 .status-dot {
   width: 8px;
   height: 8px;

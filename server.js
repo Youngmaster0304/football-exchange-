@@ -133,7 +133,7 @@ app.get('/api/leaderboard', (req, res) => {
 });
 
 app.post('/api/trade', async (req, res) => {
-  const { userId, teamCode, action, shares } = req.body;
+  const { userId, teamCode, action, shares, txid } = req.body;
   
   if (!userId || !teamCode || !action || !shares) {
     return res.status(400).json({ error: 'Missing required fields: userId, teamCode, action, shares' });
@@ -144,7 +144,7 @@ app.post('/api/trade', async (req, res) => {
     return res.status(400).json({ error: 'Invalid team code' });
   }
   
-  const result = await tradeEngine.executeTrade(userId, teamCode, action, shares, team.currentPrice);
+  const result = await tradeEngine.executeTrade(userId, teamCode, action, shares, team.currentPrice, txid);
   
   if (result.success) {
     // Broadcast trade event to highlight activity

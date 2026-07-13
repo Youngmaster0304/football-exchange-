@@ -7,6 +7,8 @@ let walletAddress = localStorage.getItem('walletAddress') || null;
 let isDemoWallet = localStorage.getItem('isDemoWallet') === 'true';
 let demoSecretKey = localStorage.getItem('demoSecretKey') ? JSON.parse(localStorage.getItem('demoSecretKey')) : null;
 let isMetaMask = localStorage.getItem('isMetaMask') === 'true';
+let isRealMode = false;
+const TREASURY_WALLET = "DDjpApzVVGeLr2be4vDq8G1B41sHSdhrnjhzqnhY7uUt";
 
 let selectedTeamCode = null;
 let activeTradeTab = 'BUY'; // BUY or SELL
@@ -26,6 +28,9 @@ const walletGate = document.getElementById('wallet-gate');
 const btnConnectPhantom = document.getElementById('btn-connect-phantom');
 const btnConnectMetaMask = document.getElementById('btn-connect-metamask');
 const btnGenerateDemo = document.getElementById('btn-generate-demo');
+const modeSwitch = document.getElementById('mode-switch');
+const toggleLblDemo = document.getElementById('toggle-lbl-demo');
+const toggleLblReal = document.getElementById('toggle-lbl-real');
 const walletAddressText = document.getElementById('wallet-address');
 const btnDisconnect = document.getElementById('btn-disconnect');
 const marketGrid = document.getElementById('market-grid');
@@ -88,6 +93,31 @@ window.addEventListener('DOMContentLoaded', () => {
     walletGate.classList.remove('hidden');
   }
 });
+
+// Mode Switch Listener (Practice vs Earn)
+if (modeSwitch) {
+  modeSwitch.addEventListener('change', () => {
+    if (isMetaMask && modeSwitch.checked) {
+      alert("Real Money Mode (Earn) is currently supported for Solana wallets. Please connect a Solana wallet to practice and earn!");
+      modeSwitch.checked = false;
+      return;
+    }
+    
+    isRealMode = modeSwitch.checked;
+    if (isRealMode) {
+      toggleLblDemo.classList.remove('active');
+      toggleLblReal.classList.add('active');
+      showToast("Real Mode Active", "You are now trading with real Solana Devnet SOL!");
+    } else {
+      toggleLblDemo.classList.add('active');
+      toggleLblReal.classList.remove('active');
+      showToast("Demo Mode Active", "You are now practicing with virtual USD cash!");
+    }
+    
+    // Reload dashboard with the corresponding portfolio
+    fetchPortfolio();
+  });
+}
 
 // Connect Phantom Wallet
 btnConnectPhantom.addEventListener('click', async () => {
@@ -216,14 +246,21 @@ let currentOwnedSharesMap = {};
 
 async function fetchPortfolio() {
   if (!walletAddress) return;
+  const currentUserId = isRealMode ? `${walletAddress}_real` : walletAddress;
   try {
-    const res = await fetch(`${API_URL}/api/portfolio/${walletAddress}`);
+    const res = await fetch(`${API_URL}/api/portfolio/${currentUserId}`);
     const data = await res.json();
     
-    // Update labels
-    portfolioNetWorth.innerText = `$${data.netWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    portfolioCash.innerText = `$${data.cash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-    lblAvailableCash.innerText = `$${data.cash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    // Update labels based on practice vs earn mode
+    if (isRealMode) {
+      portfolioNetWorth.innerText = `${(data.netWorth / 100).toFixed(4)} SOL`;
+      portfolioCash.innerText = `${(data.cash / 100).toFixed(4)} SOL`;
+      lblAvailableCash.innerText = `${(data.cash / 100).toFixed(4)} SOL`;
+    } else {
+      portfolioNetWorth.innerText = `$${data.netWorth.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      portfolioCash.innerText = `$${data.cash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      lblAvailableCash.innerText = `$${data.cash.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
     
     currentPortfolioCash = data.cash;
     currentOwnedSharesMap = data.holdings || {};
@@ -431,7 +468,12 @@ function updateEstimatedSummary() {
   
   const shares = parseInt(inputShares.value) || 0;
   const estCost = shares * team.price;
-  lblEstimatedCost.innerText = `$${estCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  
+  if (isRealMode) {
+    lblEstimatedCost.innerText = `${(estCost / 100).toFixed(4)} SOL`;
+  } else {
+    lblEstimatedCost.innerText = `$${estCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
 }
 
 /* ==========================================
@@ -453,29 +495,89 @@ async function submitTrade() {
   btnSubmitTrade.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
   
   try {
+    const team = marketTeams[selectedTeamCode];
+    if (!team) throw new Error("Selected team metadata missing.");
+    
+    const costInDollars = shares * team.price;
+    const currentUserId = isRealMode ? `${walletAddress}_real` : walletAddress;
+    
+    let signature = null;
+    
+    if (isRealMode && activeTradeTab === 'BUY') {
+      // --- REAL MONEY MODE BUY: PROMPT SOL TRANSFER ON-CHAIN ---
+      showToast('Initiating Transfer', `Please approve the SOL transfer of ${(costInDollars * 10000000 / 1e9).toFixed(4)} SOL in your wallet...`);
+      
+      const connection = new solanaWeb3.Connection("https://api.devnet.solana.com", "confirmed");
+      const fromPubKey = new solanaWeb3.PublicKey(walletAddress);
+      const toPubKey = new solanaWeb3.PublicKey(TREASURY_WALLET);
+      const lamports = Math.floor(costInDollars * 10000000);
+      
+      const transaction = new solanaWeb3.Transaction().add(
+        solanaWeb3.SystemProgram.transfer({
+          fromPubkey: fromPubKey,
+          toPubkey: toPubKey,
+          lamports: lamports
+        })
+      );
+      
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = fromPubKey;
+      
+      if (isDemoWallet) {
+        if (!demoSecretKey) throw new Error("Demo keypair secret key missing.");
+        const keypair = solanaWeb3.Keypair.fromSecretKey(new Uint8Array(demoSecretKey));
+        transaction.sign(keypair);
+        signature = await connection.sendRawTransaction(transaction.serialize());
+      } else {
+        const phantom = window.phantom?.solana || window.solana;
+        if (!phantom) throw new Error("Solana wallet extension not found.");
+        const signedTx = await phantom.signTransaction(transaction);
+        signature = await connection.sendRawTransaction(signedTx.serialize());
+      }
+      
+      // Wait for confirmation
+      console.log(`[Real Mode BUY] SOL transfer submitted: ${signature}. Confirming...`);
+      btnSubmitTrade.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Confirming SOL transfer...';
+      await connection.confirmTransaction(signature, "confirmed");
+      console.log('[Real Mode BUY] SOL transfer confirmed on-chain!');
+    }
+    
+    // Now request backend to execute the trade
     const response = await fetch(`${API_URL}/api/trade`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        userId: walletAddress,
+        userId: currentUserId,
         teamCode: selectedTeamCode,
         action: activeTradeTab,
-        shares: shares
+        shares: shares,
+        txid: signature
       })
     });
     
     const result = await response.json();
     
     if (response.ok) {
-      showToast(`Trade Successful`, `${activeTradeTab} ${shares} shares of ${selectedTeamCode} executed successfully.`);
+      if (isRealMode) {
+        const txHash = result.txid || signature;
+        showToast(
+          `Trade Successful`, 
+          `${activeTradeTab} ${shares} shares of ${selectedTeamCode} confirmed. Tx: ${txHash.substring(0, 8)}...`
+        );
+        console.log(`[Real Mode] Trade completed. Tx Explorer: https://explorer.solana.com/tx/${txHash}?cluster=devnet`);
+      } else {
+        showToast(`Trade Successful`, `${activeTradeTab} ${shares} shares of ${selectedTeamCode} executed successfully.`);
+      }
+      
       // Reload portfolio
       await fetchPortfolio();
     } else {
       alert(`Trade Failed: ${result.error}`);
     }
   } catch (err) {
-    console.error('Trade request error:', err);
-    alert('Failed to connect to the trading backend.');
+    console.error('Trade execution error:', err);
+    alert(`Failed to complete trade: ${err.message || err}`);
   } finally {
     btnSubmitTrade.disabled = false;
     updateTabUI();
